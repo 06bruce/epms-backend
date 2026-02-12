@@ -17,7 +17,8 @@ const corsOptions = {
     "http://localhost:3000",
     "http://localhost:5173",
     "http://localhost:8080",
-    "https://epms-frontend-kappa.vercel.app"
+    "https://epms-frontend-kappa.vercel.app",
+    "https://epms-frontend-five.vercel.app"
   ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
