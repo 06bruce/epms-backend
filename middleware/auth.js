@@ -1,6 +1,9 @@
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_key";
+import dotenv from "dotenv";
+dotenv.config();
+
+const getSecret = () => process.env.JWT_SECRET || "your_jwt_secret_key";
 
 export const authMiddleware = (req, res, next) => {
   try {
@@ -14,7 +17,7 @@ export const authMiddleware = (req, res, next) => {
       return res.status(401).json({ message: "Session expired. Please login again." });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, getSecret());
     // Standardizing on userId across the app
     req.userId = decoded.userId;
     next();

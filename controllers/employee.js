@@ -1,4 +1,4 @@
-import { employeesStorage, getNextSequence } from "../config/storage.js";
+import Employee from "../models/Employee.js";
 
 export const createEmployee = async (req, res) => {
   try {
@@ -9,9 +9,11 @@ export const createEmployee = async (req, res) => {
       return res.status(400).json({ message: "Please fill in all required fields: First Name, Last Name, Gender, Position, and Department." });
     }
 
-    const employeeNumber = getNextSequence('employeeNumber');
+    // Get next employee number
+    const maxEmp = await Employee.max('employeeNumber');
+    const employeeNumber = (maxEmp || 0) + 1;
 
-    const newEmployee = employeesStorage.insert({
+    const newEmployee = await Employee.create({
       employeeNumber,
       firstName,
       lastName,
@@ -21,6 +23,8 @@ export const createEmployee = async (req, res) => {
       departmentCode,
       userId
     });
+
+    console.log(`✅ Employee created in DB: ${newEmployee.firstName} ${newEmployee.lastName} (#${newEmployee.employeeNumber})`);
 
     return res.status(201).json({
       message: "Employee created successfully.",
@@ -36,7 +40,13 @@ export const createEmployee = async (req, res) => {
 export const getEmployee = async (req, res) => {
   try {
     const userId = req.userId;
-    const employees = employeesStorage.find(e => !e.userId || e.userId === userId);
+    const employees = await Employee.findAll({
+      where: {
+        [Employee.sequelize.Sequelize.Op.or]: [{ userId: null }, { userId }]
+      }
+    });
+
+    console.log(`🔍 Fetched ${employees.length} employees from DB`);
 
     return res.status(200).json({
       message: "Employee list retrieved successfully.",
@@ -57,11 +67,15 @@ export const deleteEmployee = async (req, res) => {
       return res.status(400).json({ message: "Employee number is required to delete an employee." });
     }
 
-    // employeeNumber in JSON is a Number
     const empNum = Number(employeeNumber);
-    const success = employeesStorage.delete(e => e.employeeNumber === empNum && (!e.userId || e.userId === userId));
+    const deleted = await Employee.destroy({
+      where: {
+        employeeNumber: empNum,
+        [Employee.sequelize.Sequelize.Op.or]: [{ userId: null }, { userId }]
+      }
+    });
 
-    if (success) {
+    if (deleted) {
       return res.status(200).json({ message: "Employee deleted successfully." });
     } else {
       return res.status(404).json({ message: "Employee not found or you don't have permission to delete it." });

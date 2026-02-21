@@ -29,12 +29,12 @@ app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
 // Routes
-app.use(authRoutes);
-app.use(departmentRoutes);
-app.use(employeeRoutes);
-app.use(salaryRoutes);
+app.use('/api', authRoutes);
+app.use('/api', departmentRoutes);
+app.use('/api', employeeRoutes);
+app.use('/api', salaryRoutes);
 
-// Wait for MongoDB connection before starting the server
+// Wait for MySQL connection before starting the server
 connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);

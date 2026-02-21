@@ -1,6 +1,6 @@
-import { usersStorage } from "../config/storage.js";
+import User from "../models/User.js";
 import bcrypt from "bcrypt";
-import { generateToken } from "../config/generateTiken.js";
+import { generateToken } from "../config/generateToken.js";
 
 export const signup = async (req, res) => {
   try {
@@ -11,20 +11,27 @@ export const signup = async (req, res) => {
     }
 
     // Check if user already exists
-    const existingUser = usersStorage.findOne(u => u.username === username || u.email === email);
+    const existingUser = await User.findOne({
+      where: {
+        [User.sequelize.Sequelize.Op.or]: [{ username }, { email }]
+      }
+    });
+
     if (existingUser) {
       return res.status(409).json({ message: "This username or email is already registered. Please use a different one or try logging in." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = usersStorage.insert({
+    const newUser = await User.create({
       username,
       email,
       password: hashedPassword,
       fullName: fullName || null,
       role: 'admin'
     });
+
+    console.log(`✅ User created in DB: ${newUser.username} (ID: ${newUser.id})`);
 
     return res.status(201).json({
       message: "Account created successfully. You can now login.",
@@ -48,16 +55,18 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Please provide username and password to login." });
     }
 
-    const user = usersStorage.findOne(u => u.username === username);
+    const user = await User.findOne({ where: { username } });
     if (!user) {
       return res.status(401).json({ message: "Invalid username or password. Please check and try again." });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
+      console.log(`❌ Login failed for user: ${username} (Invalid password)`);
       return res.status(401).json({ message: "Invalid username or password. Please check and try again." });
     }
 
+    console.log(`👋 User logged in: ${username} (ID: ${user.id})`);
     const token = generateToken(user.id, user.email);
 
     return res.status(200).json({

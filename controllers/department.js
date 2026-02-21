@@ -1,4 +1,4 @@
-import { departmentsStorage } from "../config/storage.js";
+import Department from "../models/Department.js";
 
 export const createDepartment = async (req, res) => {
   try {
@@ -15,17 +15,19 @@ export const createDepartment = async (req, res) => {
     }
 
     // Check if department already exists
-    const existingDept = departmentsStorage.findOne(d => d.departmentCode === departmentCode);
+    const existingDept = await Department.findOne({ where: { departmentCode } });
     if (existingDept) {
       return res.status(409).json({ message: "A department with this code already exists. Please use a different code." });
     }
 
-    const newDept = departmentsStorage.insert({
+    const newDept = await Department.create({
       departmentCode,
       departmentName,
       grossSalary,
       userId
     });
+
+    console.log(`✅ Department created in DB: ${newDept.departmentName} (${newDept.departmentCode})`);
 
     return res.status(201).json({
       message: "Department created successfully.",
@@ -41,7 +43,13 @@ export const getDepartments = async (req, res) => {
   try {
     const userId = req.userId;
     // Logic: fetch departments belonging to user or global
-    const departments = departmentsStorage.find(d => !d.userId || d.userId === userId);
+    const departments = await Department.findAll({
+      where: {
+        [Department.sequelize.Sequelize.Op.or]: [{ userId: null }, { userId }]
+      }
+    });
+
+    console.log(`🔍 Fetched ${departments.length} departments from DB`);
 
     return res.status(200).json({
       message: "Departments list retrieved successfully.",
@@ -62,9 +70,14 @@ export const deleteDepartment = async (req, res) => {
       return res.status(400).json({ message: "Department code is required to delete a department." });
     }
 
-    const success = departmentsStorage.delete(d => d.departmentCode === departmentCode && (!d.userId || d.userId === userId));
+    const deleted = await Department.destroy({
+      where: {
+        departmentCode,
+        [Department.sequelize.Sequelize.Op.or]: [{ userId: null }, { userId }]
+      }
+    });
 
-    if (success) {
+    if (deleted) {
       return res.status(200).json({ message: "Department deleted successfully." });
     } else {
       return res.status(404).json({ message: "Department not found or you don't have permission to delete it." });
